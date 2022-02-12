@@ -1,0 +1,3 @@
+rootProject.name = "VideoOverlaySample"
+include ':sample'
+include ':library'
