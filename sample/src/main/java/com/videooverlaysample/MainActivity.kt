@@ -15,6 +15,7 @@ import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.widget.AppCompatImageView
 import com.videooverlay.library.VideoOverlay
 import com.videooverlay.library.custom.ExecutionLogs
+import com.videooverlay.library.custom.Overlay
 import com.videooverlay.library.custom.ProgressStatistics
 import com.videooverlay.library.interfaces.VideoOverlayCallBack
 
@@ -24,17 +25,20 @@ class MainActivity : AppCompatActivity() {
         "/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Video/VID-20220120-WA0000.mp4"
 
     @RequiresApi(Build.VERSION_CODES.R)
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        if (Environment.isExternalStorageManager() == false) {
-            var intent = Intent(
+    override fun onResume() {
+        super.onResume()
+        if (!Environment.isExternalStorageManager()) {
+            val intent = Intent(
                 Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                Uri.parse("package:" + packageName)
+                Uri.parse("package:$packageName")
             )
             startActivity(intent)
         }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
         val progressDialog = ProgressDialog(this)
 
@@ -49,6 +53,7 @@ class MainActivity : AppCompatActivity() {
         buttonStart.setOnClickListener {
             VideoOverlay(this).startVideoRendering(
                 sampleVideoPath,
+                Overlay.CENTER,
                 imageView,
                 object : VideoOverlayCallBack {
                     override fun progressStatistics(statistics: ProgressStatistics) {

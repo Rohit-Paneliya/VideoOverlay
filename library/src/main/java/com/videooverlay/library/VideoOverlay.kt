@@ -17,6 +17,7 @@ import com.arthenica.mobileffmpeg.LogMessage
 import com.arthenica.mobileffmpeg.Statistics
 import com.videooverlay.library.custom.CallBackOfQuery
 import com.videooverlay.library.custom.ExecutionLogs
+import com.videooverlay.library.custom.OverlayPosition
 import com.videooverlay.library.custom.ProgressStatistics
 import com.videooverlay.library.interfaces.FFmpegCallBack
 import com.videooverlay.library.interfaces.VideoOverlayCallBack
@@ -25,11 +26,12 @@ import java.util.*
 
 class VideoOverlay(activity: AppCompatActivity) {
 
-    private var dataImageUri: Uri?=null
+    private var dataImageUri: Uri? = null
     private val context: AppCompatActivity = activity
 
     fun startVideoRendering(
         mainVideoPath: String,
+        overlayPosition: OverlayPosition,
         imageInputFilePath: String, listener: VideoOverlayCallBack
     ) {
 
@@ -52,7 +54,7 @@ class VideoOverlay(activity: AppCompatActivity) {
         val query = addVideoOverlayAtBottom(
             mainVideoPath,
             imageInputFilePath,
-            outputFilePath
+            outputFilePath, overlayPosition.toString()
         )
 
         listener.showLoader()
@@ -92,7 +94,7 @@ class VideoOverlay(activity: AppCompatActivity) {
                             // we should delete temp file and image overlay file
                             tempFile.delete()
                         }
-                        dataImageUri?.let { deleteFileFromStorage(it)}
+                        dataImageUri?.let { deleteFileFromStorage(it) }
 
                         listener.success(uri)
                     }
@@ -112,13 +114,13 @@ class VideoOverlay(activity: AppCompatActivity) {
     }
 
     fun startVideoRendering(
-        mainVideoPath: String,
+        mainVideoPath: String, overlayPosition: OverlayPosition,
         view: View, listener: VideoOverlayCallBack
     ) {
         dataImageUri = getImageOfView(view)
         dataImageUri?.let {
             getPath(it)?.let { imagePath ->
-                startVideoRendering(mainVideoPath, imagePath, listener)
+                startVideoRendering(mainVideoPath, overlayPosition, imagePath, listener)
             }
         }
     }
@@ -320,7 +322,8 @@ class VideoOverlay(activity: AppCompatActivity) {
     private fun addVideoOverlayAtBottom(
         inputVideo: String,
         imageInput: String,
-        output: String
+        output: String,
+        overlayPosition: String
     ): Array<String> {
         val inputs: ArrayList<String> = ArrayList()
         inputs.apply {
@@ -329,7 +332,7 @@ class VideoOverlay(activity: AppCompatActivity) {
             add("-i")
             add(imageInput)
             add("-filter_complex")
-            add("overlay=x=(W-w)/2:y=H-h-5") // center bottom
+            add(overlayPosition)
             add("-preset")
             add("ultrafast")
             add(output)
