@@ -1,39 +1,51 @@
 package com.videooverlay.library
 
-import android.content.ContentUris
 import android.content.ContentValues
-import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
-import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.text.TextUtils
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.arthenica.mobileffmpeg.LogMessage
 import com.arthenica.mobileffmpeg.Statistics
-import com.videooverlay.library.custom.CallBackOfQuery
-import com.videooverlay.library.custom.ExecutionLogs
-import com.videooverlay.library.custom.OverlayPosition
-import com.videooverlay.library.custom.ProgressStatistics
+import com.videooverlay.library.custom.*
 import com.videooverlay.library.interfaces.FFmpegCallBack
 import com.videooverlay.library.interfaces.VideoOverlayCallBack
+import com.videooverlay.library.utils.VideoOverlayUtils
 import java.io.File
 import java.util.*
 
-class VideoOverlay(activity: AppCompatActivity) {
+class VideoOverlay private constructor(builder: Builder) {
 
     private var dataImageUri: Uri? = null
-    private val context: AppCompatActivity = activity
 
-    fun startVideoRendering(
-        mainVideoPath: String,
-        overlayPosition: OverlayPosition,
-        imageInputFilePath: String, listener: VideoOverlayCallBack
-    ) {
+    private var context: AppCompatActivity = builder.activity
+    private var mainVideoPath: String = ""
+    private var overlayPosition: OverlayPosition = Overlay.TOP_RIGHT
+    private var imageInputFilePath: String = ""
+    private var overlayView: View? = null // view overlay
+    private var listener: VideoOverlayCallBack? = null
+
+    init {
+        this.mainVideoPath = builder.mainVideoPath
+        this.overlayPosition = builder.overlayPosition
+        this.imageInputFilePath = builder.imageInputFilePath
+        this.overlayView = builder.overlayView
+        this.listener = builder.listener
+    }
+
+    fun start() {
+        //If user has passed view as an overlay then convert it to an image and send image path for overlay
+        overlayView?.let {
+            convertViewToImage(it)
+        }
+        startVideoRendering()
+    }
+
+    private fun startVideoRendering() {
 
         //We need to create a temporary file in the cache, as we need to pass this path to FFmpeg
         val tempFile = File(context.cacheDir, "${getUniqueFileName()}.mp4")
@@ -57,7 +69,7 @@ class VideoOverlay(activity: AppCompatActivity) {
             outputFilePath, overlayPosition.toString()
         )
 
-        listener.showLoader()
+        listener?.showLoader()
 
         CallBackOfQuery().callQuery(
             context,
@@ -65,7 +77,7 @@ class VideoOverlay(activity: AppCompatActivity) {
             object : FFmpegCallBack {
                 override fun statisticsProcess(statistics: Statistics) {
                     statistics.apply {
-                        listener.progressStatistics(
+                        listener?.progressStatistics(
                             ProgressStatistics(
                                 executionId,
                                 videoFrameNumber,
@@ -82,12 +94,12 @@ class VideoOverlay(activity: AppCompatActivity) {
 
                 override fun process(logMessage: LogMessage) {
                     logMessage.apply {
-                        listener.progressLogs(ExecutionLogs(executionId, text))
+                        listener?.progressLogs(ExecutionLogs(executionId, text))
                     }
                 }
 
                 override fun success() {
-                    listener.hideLoader()
+                    listener?.hideLoader()
                     storeVideoRenderedFile(context, tempFile)?.let { uri ->
                         if (tempFile.exists()) {
                             // once we write this file to our external storage with image overlay,
@@ -96,31 +108,28 @@ class VideoOverlay(activity: AppCompatActivity) {
                         }
                         dataImageUri?.let { deleteFileFromStorage(it) }
 
-                        listener.success(uri)
+                        listener?.success(uri)
                     }
                 }
 
                 override fun cancel() {
-                    listener.hideLoader()
-                    listener.failed()
+                    listener?.hideLoader()
+                    listener?.failed()
                 }
 
                 override fun failed() {
-                    listener.hideLoader()
-                    listener.failed()
+                    listener?.hideLoader()
+                    listener?.failed()
                 }
             })
 
     }
 
-    fun startVideoRendering(
-        mainVideoPath: String, overlayPosition: OverlayPosition,
-        view: View, listener: VideoOverlayCallBack
-    ) {
+    private fun convertViewToImage(view: View) {
         dataImageUri = getImageOfView(view)
         dataImageUri?.let {
-            getPath(it)?.let { imagePath ->
-                startVideoRendering(mainVideoPath, overlayPosition, imagePath, listener)
+            VideoOverlayUtils.getPath(it, context)?.let { imagePath ->
+                this.imageInputFilePath = imagePath
             }
         }
     }
@@ -169,83 +178,11 @@ class VideoOverlay(activity: AppCompatActivity) {
         try {
             context.contentResolver.delete(uri, null, null)
         } catch (e: Exception) {
-            getPath(uri)?.let {
+            VideoOverlayUtils.getPath(uri, context)?.let {
                 val file = File(it)
                 file.delete()
             }
         }
-    }
-
-    private fun getPath(uri: Uri): String? {
-        var uri = uri
-        val needToCheckUri = Build.VERSION.SDK_INT >= 19
-        var selection: String? = null
-        var selectionArgs: Array<String>? = null
-        // Uri is different in versions after KITKAT (Android 4.4), we need to
-        // deal with different Uris.
-        if (needToCheckUri && DocumentsContract.isDocumentUri(context, uri)) {
-            if (isExternalStorageDocument(uri)) {
-                val docId = DocumentsContract.getDocumentId(uri)
-                val split =
-                    docId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                return Environment.getExternalStorageDirectory().toString() + "/" + split[1]
-            } else if (isDownloadsDocument(uri)) {
-                val id = DocumentsContract.getDocumentId(uri)
-                uri = ContentUris.withAppendedId(
-                    Uri.parse("content://downloads/public_downloads"),
-                    java.lang.Long.valueOf(id)
-                )
-            } else if (isMediaDocument(uri)) {
-                val docId = DocumentsContract.getDocumentId(uri)
-                val split =
-                    docId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                val type = split[0]
-                if ("image" == type) {
-                    uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                } else if ("video" == type) {
-                    uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                } else if ("audio" == type) {
-                    uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-                }
-                selection = "_id=?"
-                selectionArgs = arrayOf(split[1])
-            }
-        }
-        if ("content".equals(uri.scheme, ignoreCase = true)) {
-            val projection = arrayOf(MediaStore.Images.Media.DATA)
-            var cursor: Cursor? = null
-            try {
-                cursor = context.contentResolver.query(
-                    uri,
-                    projection,
-                    selection,
-                    selectionArgs,
-                    null
-                )
-                val column_index = cursor!!.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-                if (cursor.moveToFirst()) {
-                    return cursor.getString(column_index)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
-        } else if ("file".equals(uri.scheme, ignoreCase = true)) {
-            return uri.path
-        }
-        return null
-    }
-
-    private fun isExternalStorageDocument(uri: Uri): Boolean {
-        return "com.android.externalstorage.documents" == uri.authority
-    }
-
-    private fun isDownloadsDocument(uri: Uri): Boolean {
-        return "com.android.providers.downloads.documents" == uri.authority
-    }
-
-    private fun isMediaDocument(uri: Uri): Boolean {
-        return "com.android.providers.media.documents" == uri.authority
     }
 
     private fun storeVideoRenderedFile(context: AppCompatActivity, videoFile: File): Uri? {
@@ -345,5 +282,40 @@ class VideoOverlay(activity: AppCompatActivity) {
         var n = 10000
         n = gen.nextInt(n)
         return "$n"
+    }
+
+    class Builder(val activity: AppCompatActivity) {
+        var mainVideoPath: String = ""
+        var overlayPosition: OverlayPosition = Overlay.TOP_RIGHT
+        var imageInputFilePath: String = ""
+        var overlayView: View? = null
+        var listener: VideoOverlayCallBack? = null
+
+        fun setMainVideoFilePath(mainVideoPath: String) =
+            apply { this.mainVideoPath = mainVideoPath }
+
+        fun setOverlayImagePosition(overlayPosition: OverlayPosition) =
+            apply { this.overlayPosition = overlayPosition }
+
+        //overlay image path
+        fun setOverlayImage(imageInputFilePath: String) =
+            apply { this.imageInputFilePath = imageInputFilePath }
+
+        //overlay as view
+        fun setOverlayImage(view: View) =
+            apply { this.overlayView = view }
+
+        fun setListener(listener: VideoOverlayCallBack) = apply { this.listener = listener }
+
+        fun build(): VideoOverlay {
+            if (TextUtils.isEmpty(mainVideoPath)) {
+                throw RuntimeException("Video path must not be null or empty")
+            }
+            if (TextUtils.isEmpty(imageInputFilePath) && overlayView == null) {
+                throw RuntimeException("Image path or view must required for video overlay")
+            }
+
+            return VideoOverlay(this)
+        }
     }
 }

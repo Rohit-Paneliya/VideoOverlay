@@ -19,8 +19,10 @@ import com.videooverlay.library.custom.Overlay
 import com.videooverlay.library.custom.ProgressStatistics
 import com.videooverlay.library.interfaces.VideoOverlayCallBack
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), VideoOverlayCallBack {
 
+    private var videoView: VideoView? = null
+    private lateinit var progressDialog: ProgressDialog
     private val sampleVideoPath =
         "/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Video/VID-20220120-WA0000.mp4"
 
@@ -40,57 +42,58 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val progressDialog = ProgressDialog(this)
+        progressDialog = ProgressDialog(this)
 
-        val videoView = findViewById<VideoView>(R.id.videoView)
+        videoView = findViewById(R.id.videoView)
         val imageView = findViewById<AppCompatImageView>(R.id.imageView)
         val buttonStart = findViewById<AppCompatButton>(R.id.buttonStart)
 
         val videoPath = "android.resource://$packageName/raw/test"
-        videoView.setVideoURI(Uri.parse(videoPath))
-        videoView.start()
+        videoView?.setVideoURI(Uri.parse(videoPath))
+        videoView?.start()
 
         buttonStart.setOnClickListener {
-            VideoOverlay(this).startVideoRendering(
-                sampleVideoPath,
-                Overlay.CENTER,
-                imageView,
-                object : VideoOverlayCallBack {
-                    override fun progressStatistics(statistics: ProgressStatistics) {
-                        showMessage("progressStatistics", statistics.toString())
-                    }
-
-                    override fun progressLogs(executionLogs: ExecutionLogs) {
-                        showMessage("progressLogs", executionLogs.toString())
-                    }
-
-                    override fun success(outputFileUri: Uri) {
-                        progressDialog.dismiss()
-                        showMessage("success", "failed")
-                        videoView.setVideoURI(outputFileUri)
-                        videoView.start()
-                    }
-
-                    override fun failed() {
-                        progressDialog.dismiss()
-                        showMessage("failed", "failed")
-                    }
-
-                    override fun showLoader() {
-                        progressDialog.show()
-                        showMessage("loader", "showloader")
-                    }
-
-                    override fun hideLoader() {
-                        progressDialog.dismiss()
-                        showMessage("loader", "hideloader")
-                    }
-
-                })
+            VideoOverlay.Builder(this)
+                .setMainVideoFilePath(sampleVideoPath)
+                .setOverlayImagePosition(Overlay.BOTTOM_LEFT)
+                .setOverlayImage(imageView)
+                .setListener(this)
+                .build()
+                .start()
         }
     }
 
     fun showMessage(keyName: String, string: String) {
         Log.d("---------------$keyName", string)
+    }
+
+    override fun showLoader() {
+        progressDialog.show()
+        showMessage("loader", "showloader")
+    }
+
+    override fun hideLoader() {
+        progressDialog.dismiss()
+        showMessage("loader", "hideloader")
+    }
+
+    override fun progressStatistics(statistics: ProgressStatistics) {
+        showMessage("progressStatistics", statistics.toString())
+    }
+
+    override fun progressLogs(executionLogs: ExecutionLogs) {
+        showMessage("progressLogs", executionLogs.toString())
+    }
+
+    override fun success(outputFileUri: Uri) {
+        progressDialog.dismiss()
+        showMessage("success", "failed")
+        videoView?.setVideoURI(outputFileUri)
+        videoView?.start()
+    }
+
+    override fun failed() {
+        progressDialog.dismiss()
+        showMessage("failed", "failed")
     }
 }
