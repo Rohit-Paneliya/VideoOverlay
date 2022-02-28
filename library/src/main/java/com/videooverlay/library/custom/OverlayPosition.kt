@@ -1,8 +1,6 @@
 package com.videooverlay.library.custom
 
-sealed class OverlayPosition
-object Overlay{
-
+sealed class OverlayPosition {
     object TOP_RIGHT: OverlayPosition(){
         override fun toString(): String {
             return "overlay=W-w-5:5"

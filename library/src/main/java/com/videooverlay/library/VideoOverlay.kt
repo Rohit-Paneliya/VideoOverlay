@@ -11,7 +11,10 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.arthenica.mobileffmpeg.LogMessage
 import com.arthenica.mobileffmpeg.Statistics
-import com.videooverlay.library.custom.*
+import com.videooverlay.library.custom.CallBackOfQuery
+import com.videooverlay.library.custom.ExecutionLogs
+import com.videooverlay.library.custom.OverlayPosition
+import com.videooverlay.library.custom.ProgressStatistics
 import com.videooverlay.library.interfaces.FFmpegCallBack
 import com.videooverlay.library.interfaces.VideoOverlayCallBack
 import com.videooverlay.library.utils.VideoOverlayUtils
@@ -24,7 +27,7 @@ class VideoOverlay private constructor(builder: Builder) {
 
     private var context: AppCompatActivity = builder.activity
     private var mainVideoPath: String = ""
-    private var overlayPosition: OverlayPosition = Overlay.TOP_RIGHT
+    private var overlayPosition: OverlayPosition = OverlayPosition.TOP_RIGHT
     private var imageInputFilePath: String = ""
     private var overlayView: View? = null // view overlay
     private var listener: VideoOverlayCallBack? = null
@@ -286,7 +289,7 @@ class VideoOverlay private constructor(builder: Builder) {
 
     class Builder(val activity: AppCompatActivity) {
         var mainVideoPath: String = ""
-        var overlayPosition: OverlayPosition = Overlay.TOP_RIGHT
+        var overlayPosition: OverlayPosition = OverlayPosition.TOP_RIGHT
         var imageInputFilePath: String = ""
         var overlayView: View? = null
         var listener: VideoOverlayCallBack? = null
@@ -313,6 +316,9 @@ class VideoOverlay private constructor(builder: Builder) {
             }
             if (TextUtils.isEmpty(imageInputFilePath) && overlayView == null) {
                 throw RuntimeException("Image path or view must required for video overlay")
+            }
+            if (listener == null) {
+                throw RuntimeException("Must implement the listener to get the output video uri")
             }
 
             return VideoOverlay(this)

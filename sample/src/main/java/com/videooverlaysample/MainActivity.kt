@@ -15,7 +15,7 @@ import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.widget.AppCompatImageView
 import com.videooverlay.library.VideoOverlay
 import com.videooverlay.library.custom.ExecutionLogs
-import com.videooverlay.library.custom.Overlay
+import com.videooverlay.library.custom.OverlayPosition
 import com.videooverlay.library.custom.ProgressStatistics
 import com.videooverlay.library.interfaces.VideoOverlayCallBack
 
@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity(), VideoOverlayCallBack {
         buttonStart.setOnClickListener {
             VideoOverlay.Builder(this)
                 .setMainVideoFilePath(sampleVideoPath)
-                .setOverlayImagePosition(Overlay.BOTTOM_LEFT)
+                .setOverlayImagePosition(OverlayPosition.BOTTOM_CENTER)
                 .setOverlayImage(imageView)
                 .setListener(this)
                 .build()
