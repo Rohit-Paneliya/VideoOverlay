@@ -31,6 +31,7 @@ class VideoOverlay private constructor(builder: Builder) {
     private var imageInputFilePath: String = ""
     private var overlayView: View? = null // view overlay
     private var listener: VideoOverlayCallBack? = null
+    private var outputFolderName: String = ""
 
     init {
         this.mainVideoPath = builder.mainVideoPath
@@ -38,6 +39,7 @@ class VideoOverlay private constructor(builder: Builder) {
         this.imageInputFilePath = builder.imageInputFilePath
         this.overlayView = builder.overlayView
         this.listener = builder.listener
+        this.outputFolderName = builder.outputFolderName
     }
 
     fun start() {
@@ -110,7 +112,6 @@ class VideoOverlay private constructor(builder: Builder) {
                             tempFile.delete()
                         }
                         dataImageUri?.let { deleteFileFromStorage(it) }
-
                         listener?.success(uri)
                     }
                 }
@@ -197,7 +198,7 @@ class VideoOverlay private constructor(builder: Builder) {
                 ContentValues().apply {
                     put(MediaStore.Video.Media.DISPLAY_NAME, videoFileName)
                     put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                    put(MediaStore.Video.Media.RELATIVE_PATH, "Pictures/VideoOverlay/")
+                    put(MediaStore.Video.Media.RELATIVE_PATH, "Pictures/$outputFolderName/")
                     put(MediaStore.Video.Media.IS_PENDING, 1)
                 }
             }
@@ -205,7 +206,7 @@ class VideoOverlay private constructor(builder: Builder) {
                 ContentValues().apply {
                     put(MediaStore.DownloadColumns.DISPLAY_NAME, videoFileName)
                     put(MediaStore.DownloadColumns.MIME_TYPE, "video/mp4")
-                    put(MediaStore.DownloadColumns.RELATIVE_PATH, "Download/VideoOverlay/")
+                    put(MediaStore.DownloadColumns.RELATIVE_PATH, "Download/$outputFolderName/")
                     put(MediaStore.DownloadColumns.IS_PENDING, 0)
                 }
             }
@@ -293,6 +294,7 @@ class VideoOverlay private constructor(builder: Builder) {
         var imageInputFilePath: String = ""
         var overlayView: View? = null
         var listener: VideoOverlayCallBack? = null
+        var outputFolderName: String = "VideoOverlay"
 
         fun setMainVideoFilePath(mainVideoPath: String) =
             apply { this.mainVideoPath = mainVideoPath }
@@ -308,6 +310,8 @@ class VideoOverlay private constructor(builder: Builder) {
         fun setOverlayImage(view: View) =
             apply { this.overlayView = view }
 
+        fun setOutputFolderName(outputFolderName: String) = apply { this.outputFolderName = outputFolderName }
+
         fun setListener(listener: VideoOverlayCallBack) = apply { this.listener = listener }
 
         fun build(): VideoOverlay {
@@ -319,6 +323,9 @@ class VideoOverlay private constructor(builder: Builder) {
             }
             if (listener == null) {
                 throw RuntimeException("Must implement the listener to get the output video uri")
+            }
+            if (TextUtils.isEmpty(outputFolderName)) {
+                throw RuntimeException("Output folder name can't be an empty.")
             }
 
             return VideoOverlay(this)

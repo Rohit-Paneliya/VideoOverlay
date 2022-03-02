@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity(), VideoOverlayCallBack {
                 .setMainVideoFilePath(sampleVideoPath)
                 .setOverlayImagePosition(OverlayPosition.BOTTOM_CENTER)
                 .setOverlayImage(imageView)
+//                .setOutputFolderName("Output")
                 .setListener(this)
                 .build()
                 .start()
