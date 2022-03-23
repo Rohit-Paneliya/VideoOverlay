@@ -36,7 +36,7 @@ VideoOverlay.Builder(this)
 ```
 
 # Listener
-You must need to implement the listener to get the certain callbacks.
+You must need to implement the interface `VideoOverlayCallBack` to get the following callbacks:
 ```
 override fun showLoader() { }
 override fun hideLoader() { }
